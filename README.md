@@ -1,0 +1,252 @@
+# NixOS-WSL development environment
+
+NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flake として管理する構成です。既定ユーザーは `dnc`、対話シェルは Nushell です。共通 CLI、Docker Engine、常駐 sccache、Linux ネイティブ用 Rust devShell を含みます。
+
+設定リポジトリは `/home/dnc/nix-config` に置く前提です。プロジェクトのソースも `/mnt/c` などの Windows マウントではなく、WSL の Linux ファイルシステム内に置いてください。
+
+## 構成
+
+```text
+.
+├── flake.nix                    # inputs、NixOS/Home/開発シェル/checks
+├── flake.lock                   # 依存リビジョンの固定
+├── hosts/wsl/default.nix        # NixOS-WSL ホストと dnc ユーザー
+├── home/                        # Nushell、Helix、Zellij、Jujutsu、共通 CLI
+├── modules/docker.nix           # rootful Docker Engine と Compose v2
+├── modules/nix-settings.nix     # Flake、GC、store 最適化
+├── modules/services/sccache.nix # systemd ユーザーサービス
+├── devshells/rust.nix           # Rust、sccache、mold、clang
+├── scripts/check-rust.sh        # Rust devShell のスモークテスト
+├── windows/install-hackgen35-nf.ps1
+└── justfile
+```
+
+秘密情報、API キー、個人トークンはこの Flake に追加しないでください。
+
+## 初回導入
+
+### 1. NixOS-WSL を用意する
+
+Windows 側で WSL 2 を有効化し、[NixOS-WSL の最新リリース](https://github.com/nix-community/NixOS-WSL/releases/latest)から `nixos.wsl` を導入します。以下ではディストリビューション名を `NixOS` とします。別名で登録した場合は読み替えてください。
+
+最初の NixOS-WSL セッションではまだ `dnc` が存在しないため、一時ディレクトリから初回適用します。`<repository-url>` はこのリポジトリの URL に置き換えます。
+
+```bash
+nix shell nixpkgs#git -c git clone <repository-url> /tmp/nix-config
+cd /tmp/nix-config
+sudo nixos-rebuild build --flake .#wsl
+sudo nixos-rebuild switch --flake .#wsl
+exit
+```
+
+まだリモートへ push しておらず、Windows 側の作業コピーを `/tmp/nix-config` へコピーして試す場合は、明示的な `path:` Flake URLを使います。
+
+```bash
+cd /tmp/nix-config
+sudo nixos-rebuild build --flake 'path:/tmp/nix-config#wsl'
+sudo nixos-rebuild switch --flake 'path:/tmp/nix-config#wsl'
+exit
+```
+
+作業コピーに `.git` が含まれ、構成ファイルがまだ未追跡の場合、通常の `.#wsl` では Nix がGit管理対象のファイルしか参照できません。`path:/tmp/nix-config#wsl` はGitの追跡状態に依存せず、一時コピー全体をFlakeとして評価します。リモートへコミット・pushした後のcloneでは通常の `.#wsl` を使えます。
+
+Windows の PowerShell から一度停止して再起動します。
+
+```powershell
+wsl --terminate NixOS
+wsl -d NixOS
+```
+
+新しいセッションのユーザーが `dnc` であることを確認し、標準位置へ clone します。
+
+```nu
+whoami
+git clone <repository-url> ~/nix-config
+cd ~/nix-config
+just check
+```
+
+`whoami` の期待値は `dnc` です。以後の NixOS 再構築では、統合された Home Manager 設定も同時に適用されます。
+
+### 2. 日常の更新と適用
+
+安全な基本フローは「lock 更新 → check → build → switch」です。`flake.lock` の差分を確認してから適用してください。
+
+```nu
+cd ~/nix-config
+just update
+jj diff -- flake.lock
+just check
+just build
+just switch
+```
+
+入力を更新しない通常の変更では `just update` を省略します。`just preflight` は `check` と `build` を順に実行します。全レシピと説明は次で確認できます。
+
+```nu
+just --list
+```
+
+Home Manager だけを再適用する場合は次を使えます。ただし、既定シェル、Docker、Nix GC などのシステム設定は変更されません。通常は `just switch` を推奨します。
+
+```nu
+just home-switch
+```
+
+### 3. ロールバック
+
+NixOS と統合 Home Manager を直前の generation へ戻すには次を実行します。
+
+```nu
+sudo nixos-rebuild list-generations
+sudo nixos-rebuild switch --rollback
+```
+
+Home Manager を単独適用した場合は、`home-manager generations` で世代を確認し、戻したい `/nix/store/...-home-manager-generation/activate` を実行できます。
+
+この構成では Nix GC が毎週実行され、30 日より古い generation と、そこから参照されない store path が削除対象になります。ディスク使用量を抑える一方、削除済み世代へはロールバックできません。保持期間は [`modules/nix-settings.nix`](modules/nix-settings.nix) の `--delete-older-than 30d` で調整します。
+
+## Rust devShell
+
+非対話コマンドは Nushell を強制起動せず、そのまま実行できます。
+
+```nu
+nix develop ~/nix-config#rust --command cargo --version
+```
+
+対話環境へ入る場合は次のいずれかを使います。
+
+```nu
+nix develop ~/nix-config#rust --command nu
+ndev rust
+```
+
+Rust devShell は `rustc`、`cargo`、`rust-analyzer`、`rustfmt`、`clippy`、`cargo-make`、`sccache`、`mold`、`clang`、`pkg-config` を提供します。`RUSTC_WRAPPER` は sccache を指し、`x86_64-unknown-linux-gnu` ターゲットだけに clang と mold を設定します。mold は OS 全体へ適用されません。Android、musl、組み込みなどでは、用途別 devShell を追加してこのネイティブ向け設定を継承しない構成にできます。
+
+非対話動作、sccache、mold、最小 Rust プロジェクトのビルドはまとめて検査できます。
+
+```nu
+just rust-check
+```
+
+### 既存リポジトリで direnv を使う
+
+チームリポジトリのルートに、ローカル専用の `.envrc` を次の内容で作ります。`.envrc` は direnv が解釈する Bash 形式であり、対話シェルを Bash に変更するものではありません。
+
+```bash
+watch_file "$HOME/nix-config/flake.nix"
+watch_file "$HOME/nix-config/flake.lock"
+watch_file "$HOME/nix-config/devshells/rust.nix"
+
+use flake "$HOME/nix-config#rust"
+```
+
+リポジトリへ誤って追加しないよう、ローカル除外を設定します。
+
+```text
+# .git/info/exclude
+.envrc
+.direnv/
+```
+
+対象ディレクトリで一度だけ許可します。
+
+```nu
+direnv allow
+$env.RUSTC_WRAPPER
+```
+
+期待値は Nix store 内の `.../bin/sccache` です。Nushell の direnv フックが現在のシェルへ環境を反映するため、Zellij の新しいペインでも同じディレクトリへ移動すれば環境が復元されます。将来そのリポジトリが正式な Flake を持った場合は、`.envrc` を `use flake` に変更できます。
+
+## sccache
+
+sccache は `dnc` の systemd ユーザーサービスとしてフォアグラウンド起動し、複数リポジトリでキャッシュを共有します。ユーザーには linger を設定しているため、ユーザー manager は WSL の起動中に維持されます。
+
+適用後の確認コマンドは次のとおりです。
+
+```nu
+systemctl --user is-enabled sccache
+systemctl --user status sccache --no-pager
+systemctl --user show sccache --property Environment
+sccache --show-stats
+loginctl show-user dnc --property Linger
+```
+
+期待結果は以下です。
+
+- `sccache.service` が `enabled` かつ `active (running)`
+- `SCCACHE_NO_DAEMON=1` と `SCCACHE_IDLE_TIMEOUT=0`
+- キャッシュ先が `/home/dnc/.cache/sccache`
+- 最大サイズが `20 GiB`
+- `Linger=yes`
+
+サービス起動前にクライアントが別の sccache server を自動起動してしまった場合は、`sccache --stop-server` の後に `systemctl --user restart sccache` を実行します。
+
+## Docker
+
+Docker Desktop ではなく、NixOS-WSL 内の rootful Docker Engine を systemd サービスとして使用します。適用後、一度 WSL を終了して再度ログインし、グループ所属と Engine を確認します。
+
+```nu
+id --groups --name
+systemctl is-active docker
+docker info
+docker compose version
+docker run --rm hello-world
+```
+
+期待結果は、グループ一覧に `docker` が含まれ、サービスが `active`、`docker info` が sudo なしで成功し、`docker compose version` が Compose v2 を表示することです。
+
+> [!WARNING]
+> `docker` グループのメンバーは、コンテナのマウントや privileged 実行を通じて実質的に root 相当の権限を持ちます。信頼できないイメージや Compose 定義を安易に実行しないでください。
+
+## Nushell と共通ツール
+
+対話シェルと主要 CLI は次で確認できます。Bash スクリプトは `bash ./script.sh` のように明示して実行します。
+
+```nu
+getent passwd dnc
+bash -c 'for cmd in nu hx jj git just zellij carapace zoxide direnv rg fd difft adb fastboot sccache; do command -v "$cmd"; done'
+jj config get ui.editor
+jj config get ui.diff-formatter
+help ndev
+help zj
+direnv status
+```
+
+期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。
+
+Zellij は自動起動しません。明示的に session を attach/create します。
+
+```nu
+zj main
+```
+
+Android ツールは次で確認できます。ネットワーク ADB は WSL 内から利用できますが、USB 端末接続用の `usbipd-win` はこの構成の対象外です。
+
+```nu
+adb version
+fastboot --version
+```
+
+## HackGen35 NF
+
+フォントは Windows Terminal が描画するため、WSL 側には導入しません。必要な場合だけ、Windows PowerShell から独立スクリプトを実行します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl.localhost\NixOS\home\dnc\nix-config\windows\install-hackgen35-nf.ps1"
+```
+
+スクリプトは HackGen の最新公式リリースから HackGen35 NF を現在の Windows ユーザーへインストールします。Windows Terminal の設定は変更しません。Terminal を再起動した後、対象プロファイルのフォントとして `HackGen35 Console NF` を手動選択してください。
+
+## 実環境での最終確認
+
+このリポジトリ自体では Flake 評価とビルドを自動化しています。次は適用済み NixOS-WSL でのみ確認できます。
+
+1. Windows から `wsl -d NixOS -- whoami` を実行し、`dnc` が返る。
+2. Nushell の対話セッションで Carapace の Tab 補完、zoxide、direnv の自動反映を確認する。
+3. `systemctl --user status sccache` と `sccache --show-stats` で常駐サービス、20 GiB、保存先を確認する。
+4. sudo なしの `docker info`、`docker compose version`、テストコンテナを確認する。
+5. 外部 `.envrc` を `direnv allow` し、同じ Nushell 内と新しい Zellij ペインの両方で `$env.RUSTC_WRAPPER` を確認する。
+6. 必要なら Windows 側へフォントを入れ、Windows Terminal で描画を確認する。
+
+`just check`、`just build`、`just rust-check` が成功しても、systemd と Docker daemon の実稼働、Windows の既定 WSL ユーザー、対話補完はこの手順で別途確認してください。
