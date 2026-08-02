@@ -32,23 +32,14 @@ Windows 側で WSL 2 を有効化し、[NixOS-WSL の最新リリース](https:/
 最初の NixOS-WSL セッションではまだ `dnc` が存在しないため、一時ディレクトリから初回適用します。`<repository-url>` はこのリポジトリの URL に置き換えます。
 
 ```bash
-nix shell nixpkgs#git -c git clone <repository-url> /tmp/nix-config
-cd /tmp/nix-config
+nix-shell -p git --run 'git clone https://github.com/anonsc/nix-config.git /tmp/nix-config-bootstrap'
+cd /tmp/nix-config-bootstrap
 sudo nixos-rebuild build --flake .#wsl
 sudo nixos-rebuild switch --flake .#wsl
 exit
 ```
 
-まだリモートへ push しておらず、Windows 側の作業コピーを `/tmp/nix-config` へコピーして試す場合は、明示的な `path:` Flake URLを使います。
-
-```bash
-cd /tmp/nix-config
-sudo nixos-rebuild build --flake 'path:/tmp/nix-config#wsl'
-sudo nixos-rebuild switch --flake 'path:/tmp/nix-config#wsl'
-exit
-```
-
-作業コピーに `.git` が含まれ、構成ファイルがまだ未追跡の場合、通常の `.#wsl` では Nix がGit管理対象のファイルしか参照できません。`path:/tmp/nix-config#wsl` はGitの追跡状態に依存せず、一時コピー全体をFlakeとして評価します。リモートへコミット・pushした後のcloneでは通常の `.#wsl` を使えます。
+初期状態では `nix-command` と `flakes` がまだ無効な場合があるため、Gitの取得には従来形式の `nix-shell` を使っています。新しい `nix shell` を使う場合は、`nix --extra-experimental-features 'nix-command flakes' shell ...` のように機能を一時的に有効化してください。
 
 Windows の PowerShell から一度停止して再起動します。
 
@@ -92,6 +83,8 @@ Home Manager だけを再適用する場合は次を使えます。ただし、�
 ```nu
 just home-switch
 ```
+
+Home Managerは初回NixOS適用時のsystemdユーザーmanagerとの競合を避けるため、ユーザーサービスを適用処理内では即時起動しません。sccacheの定義を変更してHome Managerだけを適用した場合は、続けて `systemctl --user daemon-reload` と `systemctl --user restart sccache` を実行してください。通常の初回導入では、後述のWSL再起動時に自動起動します。
 
 ### 3. ロールバック
 
