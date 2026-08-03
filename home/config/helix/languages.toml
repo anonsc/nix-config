@@ -1,4 +1,12 @@
 [[language]]
+name = "rust"
+language-servers = ["rust-analyzer"]
+auto-format = true
+
+[language-server.rust-analyzer.config]
+check.command = "clippy"
+
+[[language]]
 name = "nix"
 language-servers = ["nixd"]
 formatter = { command = "nixfmt" }

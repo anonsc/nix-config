@@ -84,44 +84,56 @@
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
-              for program in nu carapace fzf zoxide hx zellij jj git gh just direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
-                command -v "$program" >/dev/null
+              for program in nu carapace fzf zoxide hx zellij jj git gh just direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
+                if ! command -v "$program" >/dev/null; then
+                  echo "missing CLI: $program" >&2
+                  exit 1
+                fi
               done
+
               touch "$out"
             '';
-
         nushell-config =
           pkgs.runCommand "nushell-config-check"
             {
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
-              env -u RUSTC_WRAPPER -u SCCACHE_DIR -u SCCACHE_IGNORE_SERVER_IO_ERROR \
+              env -u SCCACHE_DIR -u SCCACHE_IGNORE_SERVER_IO_ERROR \
+                -u WINDOWS_ADB \
                 EXPECTED_CACHE=/home/dnc/.cache/sccache \
+                EXPECTED_ADB=/mnt/c/dev/bin/platform-tools/adb.exe \
                 nu \
                   --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
                   --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
                   --commands '
-                    if not ($env.RUSTC_WRAPPER | path exists) { exit 1 }
                     if $env.SCCACHE_DIR != $env.EXPECTED_CACHE { exit 1 }
+                    if $env.WINDOWS_ADB != $env.EXPECTED_ADB { exit 1 }
                   '
 
-              env RUSTC_WRAPPER=/project/rustc-wrapper \
+              env WINDOWS_ADB=/project/adb \
                 SCCACHE_DIR=/project/cache \
-                EXPECTED_WRAPPER=/project/rustc-wrapper \
                 EXPECTED_CACHE=/project/cache \
+                EXPECTED_ADB=/project/adb \
                 nu \
                   --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
                   --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
                   --commands '
-                    if $env.RUSTC_WRAPPER != $env.EXPECTED_WRAPPER { exit 1 }
                     if $env.SCCACHE_DIR != $env.EXPECTED_CACHE { exit 1 }
+                    if $env.WINDOWS_ADB != $env.EXPECTED_ADB { exit 1 }
                   '
 
               nu \
                 --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
                 --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
-                --commands 'help ndev | ignore; help zj | ignore'
+                --commands '
+                  help ndev | ignore
+                  help zj | ignore
+                  help clip-copy | ignore
+                  help clip-paste | ignore
+                  help img | ignore
+                  help adb | ignore
+                '
               touch "$out"
             '';
 

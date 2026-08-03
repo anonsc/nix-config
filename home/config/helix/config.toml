@@ -3,3 +3,11 @@ theme = "ao"
 true-color = true
 line-number = "relative"
 mouse = false
+clipboard-provider = "wayland"
+default-yank-register = "+"
+
+[editor.lsp]
+display-inlay-hints = true
+
+[editor.file-picker]
+hidden = false

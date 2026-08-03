@@ -1,1 +1,2 @@
 default_shell "nu"
+copy_command "wl-copy"

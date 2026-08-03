@@ -1,21 +1,21 @@
 { pkgs, ... }:
 {
   home.packages = with pkgs; [
-    android-tools
     bat
     bottom
     difftastic
     dust
     fd
+    imv
     jq
     just
     marksman
     nixd
     nixfmt
     ripgrep
-    sccache
     taplo
     vscode-langservers-extracted
+    wl-clipboard
   ];
 
   programs.git.enable = true;

@@ -1,24 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-expected_wrapper="$(command -v sccache)"
-if [[ "${RUSTC_WRAPPER:-}" != "$expected_wrapper" ]]; then
-  echo "RUSTC_WRAPPER does not point to the devShell's sccache." >&2
-  exit 1
-fi
-
-linker="${CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER:-}"
-if [[ ! -x "$linker" ]]; then
-  echo "The native Rust linker is not executable: $linker" >&2
-  exit 1
-fi
-
-target_rustflags="${CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS:-}"
-mold_path="${target_rustflags##*=}"
-if [[ "$target_rustflags" != *"-fuse-ld="* || ! -x "$mold_path" ]]; then
-  echo "Native target RUSTFLAGS does not select an executable mold linker: $target_rustflags" >&2
-  exit 1
-fi
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 smoke_dir="$(mktemp -d /tmp/nix-config-rust-smoke.XXXXXXXX)"
 cleanup() {
@@ -28,13 +11,26 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cd "$smoke_dir"
+mkdir -p "$smoke_dir/cargo-home" "$smoke_dir/project"
+ln -s "$repo_root/home/config/cargo/config.toml" "$smoke_dir/cargo-home/config.toml"
+
+cd "$smoke_dir/project"
 cargo init --quiet --bin --name rust-smoke .
-cargo build --verbose
+
+# Prove that the personal Cargo config supplies these optimizations without
+# relying on the environment-variable implementation that it replaced.
+unset RUSTC_WRAPPER
+unset CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER
+unset CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS
+
+CARGO_HOME="$smoke_dir/cargo-home" cargo build --verbose 2>&1 | tee "$smoke_dir/build.log"
+
+grep -F "sccache" "$smoke_dir/build.log" >/dev/null
+grep -F "linker=clang" "$smoke_dir/build.log" >/dev/null
+grep -F "link-arg=-fuse-ld=mold" "$smoke_dir/build.log" >/dev/null
 
 cargo --version
 rustc --version
+rust-analyzer --version
 sccache --show-stats
-echo "RUSTC_WRAPPER=$RUSTC_WRAPPER"
-echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=$linker"
-echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS=$target_rustflags"
+echo "Personal Cargo config selected sccache, clang, and mold."

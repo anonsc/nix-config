@@ -9,9 +9,9 @@ let
     EDITOR = "hx";
     VISUAL = "hx";
 
+    WINDOWS_ADB = "/mnt/c/dev/bin/platform-tools/adb.exe";
     # Personal Rust optimization. Project devShells remain free to replace or
     # unset this without depending on this repository.
-    RUSTC_WRAPPER = lib.getExe pkgs.sccache;
     SCCACHE_DIR = "${config.xdg.cacheHome}/sccache";
     SCCACHE_IGNORE_SERVER_IO_ERROR = "1";
   };

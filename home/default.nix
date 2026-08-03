@@ -6,6 +6,7 @@ let
 in
 {
   imports = [
+    ./cargo.nix
     ./cli.nix
     ./environment.nix
     ./helix.nix

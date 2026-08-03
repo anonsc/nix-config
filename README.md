@@ -137,14 +137,16 @@ gh auth status
 
 ## 個人環境とプロジェクト Flake の境界
 
-[`home/environment.nix`](home/environment.nix) は dnc の既定値として `EDITOR`、`VISUAL`、`RUSTC_WRAPPER`、`SCCACHE_DIR`、`SCCACHE_IGNORE_SERVER_IO_ERROR` を設定します。`RUSTC_WRAPPER` は Home Manager が導入した sccache の絶対パスを指すため、各 Rust プロジェクトは sccache を必須依存へ追加しなくても、個人環境ではキャッシュを利用できます。他の開発者の環境にはこの設定が存在しないだけなので、プロジェクトの Flake は単独で再現できる状態を保てます。
+[`home/environment.nix`](home/environment.nix) は dnc の既定値として `EDITOR`、`VISUAL`、`WINDOWS_ADB`、`SCCACHE_DIR`、`SCCACHE_IGNORE_SERVER_IO_ERROR` を設定します。Nushell では、これらを変数が未設定の場合だけ補うため、プロジェクトの `devShell` が同名の値を明示した場合は、そのプロジェクト値が優先されます。
 
-Nushell では、これらを変数が未設定の場合だけ補います。プロジェクトの `devShell` が `RUSTC_WRAPPER` や `SCCACHE_DIR` を明示した場合は、そのプロジェクト値が優先されます。適用後は通常のシェルで次を確認できます。
+個人用のRust最適化は [`home/cargo.nix`](home/cargo.nix) が配置する `~/.cargo/config.toml` に分離しています。通常のCargoビルドではsccacheをラッパーにし、`x86_64-unknown-linux-gnu`だけにclangとmoldを使います。プロジェクト側のFlakeはこれらを必須依存にする必要がなく、他の開発者にはプロジェクトが定義した環境だけが適用されます。プロジェクトに固有の `.cargo/config.toml` や環境変数があれば、Cargoの通常の優先順位で個人設定を上書きできます。
+
+適用後は通常のシェルで次を確認できます。
 
 ```nu
-$env.RUSTC_WRAPPER
 $env.SCCACHE_DIR
 $env.SCCACHE_IGNORE_SERVER_IO_ERROR
+open ~/.cargo/config.toml
 ```
 
 `XDG_CONFIG_HOME` と `CARGO_HOME` は既定位置がすでに `~/.config` と `~/.cargo` なので重複定義しません。`SCCACHE_DIRECT` も現在の sccache では既定で有効です。`ANDROID_HOME` と `ANDROID_SDK_ROOT` は完全な Android SDK を管理するときに、`RUSTONIG_SYSTEM_LIBONIG` はそれを必要とするプロジェクト側で設定します。未導入の Topiary 用変数、標準位置を使う JJ の変数、現在の sccache サービスとポートが食い違う `SCCACHE_SERVER_PORT=9998` も追加していません。
@@ -164,7 +166,9 @@ nix develop ~/nix-config#rust --command nu
 ndev rust
 ```
 
-Rust devShell は `rustc`、`cargo`、`rust-analyzer`、`rustfmt`、`clippy`、`cargo-make`、`sccache`、`mold`、`clang`、`pkg-config` を提供します。`RUSTC_WRAPPER` は sccache を指し、`x86_64-unknown-linux-gnu` ターゲットだけに clang と mold を設定します。mold は OS 全体へ適用されません。Android、musl、組み込みなどでは、用途別 devShell を追加してこのネイティブ向け設定を継承しない構成にできます。
+Rust devShell は `rustc`、`cargo`、`rust-analyzer`、`rustfmt`、`clippy`、`cargo-make`、`sccache`、`mold`、`clang`、`pkg-config` を提供します。sccache、clang、moldの選択は個人用Cargo設定が担当し、devShell自体はツールを提供するだけです。moldはOS全体へ適用されません。Android、musl、組み込みなどのプロジェクトは、プロジェクト側のCargo設定や環境変数で固有のリンカー設定を選べます。
+
+HelixはRustで`rust-analyzer`を使い、保存時にrustfmtを実行します。rust-analyzerの保存時診断は`cargo check`ではなく`cargo clippy`を使い、型や引数などのinlay hintsも表示します。全featureの同時有効化は個人既定にしていません。プロジェクト固有のfeatureやtargetが必要な場合は、そのリポジトリの`.helix/languages.toml`またはdevShellで上書きしてください。
 
 非対話動作、sccache、mold、最小 Rust プロジェクトのビルドはまとめて検査できます。
 
@@ -196,10 +200,10 @@ use flake "$HOME/nix-config#rust"
 
 ```nu
 direnv allow
-$env.RUSTC_WRAPPER
+$env.SCCACHE_DIR
 ```
 
-期待値は Nix store 内の `.../bin/sccache` です。Nushell の direnv フックが現在のシェルへ環境を反映するため、Zellij の新しいペインでも同じディレクトリへ移動すれば環境が復元されます。将来そのリポジトリが正式な Flake を持った場合は、`.envrc` を `use flake` に変更できます。
+期待値は `/home/dnc/.cache/sccache` です。Nushell の direnv フックが現在のシェルへ環境を反映するため、Zellij の新しいペインでも同じディレクトリへ移動すれば環境が復元されます。Cargoが使うラッパーとリンカーは `~/.cargo/config.toml` で確認できます。将来そのリポジトリが正式な Flake を持った場合は、`.envrc` をそのプロジェクトの `use flake` に変更できます。
 
 ## sccache
 
@@ -250,7 +254,7 @@ docker run --rm hello-world
 
 ```nu
 getent passwd dnc
-bash -c 'for cmd in nu hx jj git just zellij carapace fzf zoxide direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do command -v "$cmd"; done'
+bash -c 'for cmd in nu hx jj git gh just zellij carapace fzf zoxide direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do command -v "$cmd"; done'
 jj config get ui.editor
 jj config get ui.diff-formatter
 jj config get user.email
@@ -259,12 +263,29 @@ hx --health nix
 hx --health toml
 hx --health markdown
 hx --health json
+hx --health rust
 help ndev
 help zj
 direnv status
 ```
 
 期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Helix の health では Nix に `nixd`、TOML に `taplo`、Markdown に `marksman`、JSON に `vscode-json-language-server` が表示されます。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、fzf、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。ファイルを対話的に検索する場合は、検索起点へ移動して `fzf` を実行します。隠しファイルも `fd` から候補へ渡されるため、ホーム全体なら `cd ~` のあと `fzf` を起動し、ファイル名の一部を入力して絞り込めます。
+
+### 共通クリップボード
+
+`wl-clipboard` を WSLg の Wayland クリップボードへ接続し、Windows、Nushell、Helix、Zellij で同じシステムクリップボードを共有します。Helix は `+` レジスタを既定の yank/paste 先にしているため、通常の `y` と `p` がシステムクリップボードを使います。既定の `Space y`、`Space p` も明示的なクリップボード操作として利用できます。Zellij はコピーした選択範囲を `wl-copy` へ渡します。
+
+この経路はWSLgのWaylandセッションを前提にします。Windows実行ファイルを別管理する `win32yank` は重複して導入していません。WSLgを使わない環境へ移す場合に、Helixの `win-32-yank` プロバイダを代替候補として検討します。
+
+Nushell ではパイプからコピーし、クリップボードのテキストを標準出力へ戻せます。
+
+```nu
+"hello from NixOS" | clip-copy
+clip-paste
+hx --health clipboard
+```
+
+`hx --health clipboard` の期待値は `wayland (wl-paste+wl-copy)` です。Windows側へ貼り付けられること、Windows側でコピーしたテキストを `clip-paste` で取得できることも確認します。
 
 一時的に試したいコマンドは、恒久パッケージへ追加する前に comma で実行できます。Nushell では外部コマンドであることを `^` で明示します。
 
@@ -279,11 +300,20 @@ Zellij は自動起動しません。明示的に session を attach/create し�
 zj main
 ```
 
-Android ツールは次で確認できます。ネットワーク ADB は WSL 内から利用できますが、USB 端末接続用の `usbipd-win` はこの構成の対象外です。
+### 画像と SVG
+
+別ウィンドウで正確に表示する場合は、WSLg対応の `imv` を使います。PNG、JPEG、GIF、WebP、SVGなどに対応し、開いているファイルが保存された場合は自動的に再読み込みします。SVGをHelixで編集しながらプレビューする場合は、別のZellijペインで `img` を起動したままにできます。
 
 ```nu
+img ./assets/logo.svg
+```
+
+ADBはLinux版Android SDKを常設せず、`/mnt/c/dev/bin/platform-tools/adb.exe`にあるWindows版をNushell関数から呼び出します。WindowsへUSB接続された端末をWindows版ADBが直接扱うため、この経路では`usbipd-win`を必要としません。パスが異なるPCでは `WINDOWS_ADB` をその環境で上書きしてください。fastbootは常設していません。
+
+```nu
+$env.WINDOWS_ADB
 adb version
-fastboot --version
+adb devices
 ```
 
 ## HackGen NF
@@ -312,7 +342,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl.localhost\NixOS\h
 2. Nushell の対話セッションで Carapace の Tab 補完、zoxide、direnv の自動反映を確認する。
 3. `systemctl --user status sccache` と `sccache --show-stats` で常駐サービス、20 GiB、保存先を確認する。
 4. sudo なしの `docker info`、`docker compose version`、テストコンテナを確認する。
-5. 外部 `.envrc` を `direnv allow` し、同じ Nushell 内と新しい Zellij ペインの両方で `$env.RUSTC_WRAPPER` を確認する。
+5. 外部 `.envrc` を `direnv allow` し、同じ Nushell 内と新しい Zellij ペインの両方で `$env.SCCACHE_DIR` を確認する。`just rust-check` で個人用Cargo設定によるsccache、clang、moldの使用を確認する。
 6. 必要なら Windows 側へフォントを入れ、Windows Terminal で描画を確認する。
 
 `just check`、`just build`、`just rust-check` が成功しても、systemd と Docker daemon の実稼働、Windows の既定 WSL ユーザー、対話補完はこの手順で別途確認してください。
