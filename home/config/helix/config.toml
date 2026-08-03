@@ -1,3 +1,5 @@
+theme = "ao"
 [editor]
+true-color = true
 line-number = "relative"
 mouse = false
