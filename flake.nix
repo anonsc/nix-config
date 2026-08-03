@@ -84,7 +84,7 @@
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
-              for program in nu carapace fzf zoxide hx zellij jj git just direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
+              for program in nu carapace fzf zoxide hx zellij jj git gh just direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
                 command -v "$program" >/dev/null
               done
               touch "$out"

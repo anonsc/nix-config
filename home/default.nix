@@ -21,7 +21,15 @@ in
   };
 
   programs.home-manager.enable = true;
-  programs.git.settings.user = identity;
+  programs.git.settings = {
+    user = identity;
+
+    # Repositories and bootstrap scripts often publish HTTPS clone URLs. Each
+    # WSL environment carries its own default GitHub SSH key, so transparently
+    # route those URLs through that environment's key instead of prompting for
+    # an HTTPS username and token.
+    url."git@github.com:".insteadOf = "https://github.com/";
+  };
   programs.jujutsu.settings.user = identity;
 
   # On the first NixOS switch, dnc's lingering user manager can start before

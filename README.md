@@ -111,6 +111,28 @@ Home Manager を単独適用した場合は、`home-manager generations` で世�
 
 この構成では Nix GC が毎週実行され、30 日より古い generation と、そこから参照されない store path が削除対象になります。ディスク使用量を抑える一方、削除済み世代へはロールバックできません。保持期間は [`modules/nix-settings.nix`](modules/nix-settings.nix) の `--delete-older-than 30d` で調整します。
 
+## GitHub の認証
+
+GitHub CLI と、その Git credential helper は Home Manager で導入します。`gh` が作成する OAuth token、SSH 秘密鍵、会社 SSO の認証は秘密情報なので Nix では管理しません。Home Manager が Git の設定ファイルを管理するため、`gh auth setup-git` を別途実行する必要はありません。
+
+この構成は、個人用WSLと会社用WSLがそれぞれ自身の `~/.ssh/id_ed25519` を持つ運用を前提にします。Gitは `https://github.com/...` を透過的に `git@github.com:...` へ書き換えるため、変更できない `setup.sh` 内のHTTPS cloneも、そのWSLのSSH鍵で認証されます。1つのWSL内で複数のGitHubアカウントを同時利用する場合は、SSH host aliasとOrganization単位のURL変換へ分割してください。
+
+SSH鍵の公開鍵を対象のGitHubアカウントへ登録した後、認証先とURL変換を確認します。
+
+```nu
+ssh -T git@github.com
+git ls-remote --get-url https://github.com/OWNER/REPOSITORY.git
+```
+
+2行目は通信せず、`git@github.com:OWNER/REPOSITORY.git` と表示されれば変換成功です。GitHub CLIでPRやIssueも操作する場合だけ、各WSLで一度ブラウザ認証します。既存のSSH鍵を使うため、鍵の作成・アップロードはスキップします。
+
+```nu
+gh auth login --hostname github.com --git-protocol ssh --web --skip-ssh-key
+gh auth status
+```
+
+会社OrganizationがSAML SSOを使う場合は、会社側GitHubの設定でSSH鍵とGitHub CLIアプリをそのOrganizationへ許可します。`sudo bash ./setup.sh` はrootのホームと認証設定へ切り替わるため避け、通常ユーザーで `bash ./setup.sh` を実行してください。
+
 ## Rust devShell
 
 非対話コマンドは Nushell を強制起動せず、そのまま実行できます。
