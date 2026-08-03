@@ -96,8 +96,31 @@
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
+              env -u RUSTC_WRAPPER -u SCCACHE_DIR -u SCCACHE_IGNORE_SERVER_IO_ERROR \
+                EXPECTED_CACHE=/home/dnc/.cache/sccache \
+                nu \
+                  --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
+                  --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
+                  --commands '
+                    if not ($env.RUSTC_WRAPPER | path exists) { exit 1 }
+                    if $env.SCCACHE_DIR != $env.EXPECTED_CACHE { exit 1 }
+                  '
+
+              env RUSTC_WRAPPER=/project/rustc-wrapper \
+                SCCACHE_DIR=/project/cache \
+                EXPECTED_WRAPPER=/project/rustc-wrapper \
+                EXPECTED_CACHE=/project/cache \
+                nu \
+                  --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
+                  --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
+                  --commands '
+                    if $env.RUSTC_WRAPPER != $env.EXPECTED_WRAPPER { exit 1 }
+                    if $env.SCCACHE_DIR != $env.EXPECTED_CACHE { exit 1 }
+                  '
+
               nu \
                 --config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/config.nu \
+                --env-config ${self.homeConfigurations.dnc.activationPackage}/home-files/.config/nushell/env.nu \
                 --commands 'help ndev | ignore; help zj | ignore'
               touch "$out"
             '';

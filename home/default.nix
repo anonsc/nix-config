@@ -7,6 +7,7 @@ in
 {
   imports = [
     ./cli.nix
+    ./environment.nix
     ./helix.nix
     ./jj.nix
     ./nushell.nix

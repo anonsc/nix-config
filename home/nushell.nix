@@ -21,12 +21,6 @@ in
 
   programs.nushell = {
     enable = true;
-
-    environmentVariables = {
-      EDITOR = "hx";
-      VISUAL = "hx";
-    };
-
     extraConfig = "source ${functions}";
   };
 

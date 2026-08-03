@@ -12,6 +12,7 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 ├── flake.lock                   # 依存リビジョンの固定
 ├── hosts/wsl/default.nix        # NixOS-WSL ホストと dnc ユーザー
 ├── home/                        # Home Manager モジュールと共有 identity
+│   ├── environment.nix         # dnc の環境変数と任意の sccache 最適化
 │   └── config/                 # アプリ本来の形式で編集する設定ファイル
 │       ├── helix/config.toml
 │       ├── helix/languages.toml
@@ -134,6 +135,20 @@ gh auth status
 
 会社OrganizationがSAML SSOを使う場合は、会社側GitHubの設定でSSH鍵とGitHub CLIアプリをそのOrganizationへ許可します。`sudo bash ./setup.sh` はrootのホームと認証設定へ切り替わるため避け、通常ユーザーで `bash ./setup.sh` を実行してください。
 
+## 個人環境とプロジェクト Flake の境界
+
+[`home/environment.nix`](home/environment.nix) は dnc の既定値として `EDITOR`、`VISUAL`、`RUSTC_WRAPPER`、`SCCACHE_DIR`、`SCCACHE_IGNORE_SERVER_IO_ERROR` を設定します。`RUSTC_WRAPPER` は Home Manager が導入した sccache の絶対パスを指すため、各 Rust プロジェクトは sccache を必須依存へ追加しなくても、個人環境ではキャッシュを利用できます。他の開発者の環境にはこの設定が存在しないだけなので、プロジェクトの Flake は単独で再現できる状態を保てます。
+
+Nushell では、これらを変数が未設定の場合だけ補います。プロジェクトの `devShell` が `RUSTC_WRAPPER` や `SCCACHE_DIR` を明示した場合は、そのプロジェクト値が優先されます。適用後は通常のシェルで次を確認できます。
+
+```nu
+$env.RUSTC_WRAPPER
+$env.SCCACHE_DIR
+$env.SCCACHE_IGNORE_SERVER_IO_ERROR
+```
+
+`XDG_CONFIG_HOME` と `CARGO_HOME` は既定位置がすでに `~/.config` と `~/.cargo` なので重複定義しません。`SCCACHE_DIRECT` も現在の sccache では既定で有効です。`ANDROID_HOME` と `ANDROID_SDK_ROOT` は完全な Android SDK を管理するときに、`RUSTONIG_SYSTEM_LIBONIG` はそれを必要とするプロジェクト側で設定します。未導入の Topiary 用変数、標準位置を使う JJ の変数、現在の sccache サービスとポートが食い違う `SCCACHE_SERVER_PORT=9998` も追加していません。
+
 ## Rust devShell
 
 非対話コマンドは Nushell を強制起動せず、そのまま実行できます。
@@ -189,6 +204,8 @@ $env.RUSTC_WRAPPER
 ## sccache
 
 sccache は `dnc` の systemd ユーザーサービスとしてフォアグラウンド起動し、複数リポジトリでキャッシュを共有します。ユーザーには linger を設定しているため、ユーザー manager は WSL の起動中に維持されます。
+
+`SCCACHE_IGNORE_SERVER_IO_ERROR=1` により、キャッシュサーバーとの通信に失敗した場合はコンパイル自体を失敗させず、ローカルコンパイラへフォールバックします。
 
 適用後の確認コマンドは次のとおりです。
 
