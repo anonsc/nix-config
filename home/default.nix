@@ -1,3 +1,9 @@
+let
+  identity = {
+    name = "anonsc";
+    email = "102777199+anonsc@users.noreply.github.com";
+  };
+in
 {
   imports = [
     ./cli.nix
@@ -15,6 +21,8 @@
   };
 
   programs.home-manager.enable = true;
+  programs.git.settings.user = identity;
+  programs.jujutsu.settings.user = identity;
 
   # On the first NixOS switch, dnc's lingering user manager can start before
   # Home Manager has linked its units. Let WantedBy start them on the next

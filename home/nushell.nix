@@ -1,7 +1,17 @@
+let
+  functions = ./config/nushell/functions.nu;
+in
 {
   programs.carapace = {
     enable = true;
     enableNushellIntegration = true;
+  };
+
+  programs.fzf = {
+    enable = true;
+    enableNushellIntegration = true;
+    defaultCommand = "fd --hidden --type f --exclude .git";
+    fileWidget.command = "fd --hidden --type f --exclude .git";
   };
 
   programs.zoxide = {
@@ -17,17 +27,8 @@
       VISUAL = "hx";
     };
 
-    extraConfig = ''
-      # Enter a named development shell from ~/nix-config without forcing
-      # Nushell from the flake's shell hook.
-      def ndev [shell: string = "rust"] {
-        nix develop $"($env.HOME)/nix-config#($shell)" --command nu
-      }
-
-      # Explicitly attach to or create a Zellij session.
-      def zj [session: string = "main"] {
-        zellij attach --create $session
-      }
-    '';
+    extraConfig = "source ${functions}";
   };
+
+  xdg.configFile."nushell/functions.nu".source = functions;
 }

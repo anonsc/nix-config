@@ -11,7 +11,13 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 ├── flake.nix                    # inputs、NixOS/Home/開発シェル/checks
 ├── flake.lock                   # 依存リビジョンの固定
 ├── hosts/wsl/default.nix        # NixOS-WSL ホストと dnc ユーザー
-├── home/                        # Nushell、Helix、Zellij、Jujutsu、共通 CLI
+├── home/                        # Home Manager モジュールと共有 identity
+│   └── config/                 # アプリ本来の形式で編集する設定ファイル
+│       ├── helix/config.toml
+│       ├── helix/languages.toml
+│       ├── jj/10-ui.toml
+│       ├── nushell/functions.nu
+│       └── zellij/config.kdl
 ├── modules/docker.nix           # rootful Docker Engine と Compose v2
 ├── modules/nix-settings.nix     # Flake、GC、store 最適化
 ├── modules/services/sccache.nix # systemd ユーザーサービス
@@ -22,6 +28,8 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 ```
 
 秘密情報、API キー、個人トークンはこの Flake に追加しないでください。
+
+アプリ固有の設定は、編集しやすいよう `home/config` 以下へネイティブ形式のまま置き、Home Manager の `xdg.configFile` で `~/.config` 以下へ配置します。パッケージの有効化、シェル統合、Git と Jujutsu で共有する identity など、複数の設定を合成する必要がある部分だけを Nix で生成します。配置先は Nix store への読み取り専用リンクになるため、実環境の `~/.config` ではなく、このリポジトリのソースを編集して再構築してください。
 
 ## 初回導入
 
@@ -198,15 +206,28 @@ docker run --rm hello-world
 
 ```nu
 getent passwd dnc
-bash -c 'for cmd in nu hx jj git just zellij carapace zoxide direnv rg fd difft adb fastboot sccache; do command -v "$cmd"; done'
+bash -c 'for cmd in nu hx jj git just zellij carapace fzf zoxide direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do command -v "$cmd"; done'
 jj config get ui.editor
 jj config get ui.diff-formatter
+jj config get user.email
+git config --global --get user.email
+hx --health nix
+hx --health toml
+hx --health markdown
+hx --health json
 help ndev
 help zj
 direnv status
 ```
 
-期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。
+期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Helix の health では Nix に `nixd`、TOML に `taplo`、Markdown に `marksman`、JSON に `vscode-json-language-server` が表示されます。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、fzf、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。ファイルを対話的に検索する場合は、検索起点へ移動して `fzf` を実行します。隠しファイルも `fd` から候補へ渡されるため、ホーム全体なら `cd ~` のあと `fzf` を起動し、ファイル名の一部を入力して絞り込めます。
+
+一時的に試したいコマンドは、恒久パッケージへ追加する前に comma で実行できます。Nushell では外部コマンドであることを `^` で明示します。
+
+```nu
+^, cowsay hello
+nix-locate bin/cowsay
+```
 
 Zellij は自動起動しません。明示的に session を attach/create します。
 

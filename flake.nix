@@ -13,6 +13,11 @@
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -21,12 +26,21 @@
       nixpkgs,
       nixos-wsl,
       home-manager,
+      nix-index-database,
       ...
     }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       rustShell = import ./devshells/rust.nix { inherit pkgs; };
+      homeModule = {
+        imports = [
+          nix-index-database.homeModules.default
+          ./home
+        ];
+        programs.nix-index.package = nix-index-database.packages.${system}.nix-index-with-small-db;
+        programs.nix-index-database.comma.enable = true;
+      };
     in
     {
       nixosConfigurations.wsl = nixpkgs.lib.nixosSystem {
@@ -41,7 +55,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               backupFileExtension = "hm-backup";
-              users.dnc = import ./home;
+              users.dnc = homeModule;
             };
           }
         ];
@@ -49,7 +63,7 @@
 
       homeConfigurations.dnc = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        modules = [ ./home ];
+        modules = [ homeModule ];
       };
 
       devShells.${system} = {
@@ -70,7 +84,7 @@
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
-              for program in nu carapace zoxide hx zellij jj git just direnv rg fd difft adb fastboot sccache; do
+              for program in nu carapace fzf zoxide hx zellij jj git just direnv rg fd difft adb fastboot sccache bat btm dust jq nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
                 command -v "$program" >/dev/null
               done
               touch "$out"

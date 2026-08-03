@@ -1,0 +1,3 @@
+[ui]
+editor = "hx"
+diff-formatter = ["difft", "--color=always", "$left", "$right"]
