@@ -23,6 +23,7 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 ├── modules/services/sccache.nix # systemd ユーザーサービス
 ├── devshells/rust.nix           # Rust、sccache、mold、clang
 ├── scripts/check-rust.sh        # Rust devShell のスモークテスト
+├── windows/install-hackgen-nf.ps1
 ├── windows/install-hackgen35-nf.ps1
 └── justfile
 ```
@@ -268,15 +269,23 @@ adb version
 fastboot --version
 ```
 
-## HackGen35 NF
+## HackGen NF
 
 フォントは Windows Terminal が描画するため、WSL 側には導入しません。必要な場合だけ、Windows PowerShell から独立スクリプトを実行します。
+
+通常の半角1:全角2版をインストールする場合は次を実行します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl.localhost\NixOS\home\dnc\nix-config\windows\install-hackgen-nf.ps1"
+```
+
+Terminal を再起動した後、対象プロファイルのフォントとして `HackGen Console NF` を選択します。半角英数字を通常版より大きく表示する半角3:全角5版を使いたい場合は、既存のスクリプトを実行します。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl.localhost\NixOS\home\dnc\nix-config\windows\install-hackgen35-nf.ps1"
 ```
 
-スクリプトは HackGen の最新公式リリースから HackGen35 NF を現在の Windows ユーザーへインストールします。Windows Terminal の設定は変更しません。Terminal を再起動した後、対象プロファイルのフォントとして `HackGen35 Console NF` を手動選択してください。
+こちらは `HackGen35 Console NF` を選択します。両スクリプトともHackGenの最新公式リリースから対象のNerd Fontだけを現在のWindowsユーザーへインストールし、Windows Terminalの設定自体は変更しません。
 
 ## 実環境での最終確認
 
