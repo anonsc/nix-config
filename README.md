@@ -47,6 +47,8 @@ sudo nixos-rebuild switch --flake .#wsl
 exit
 ```
 
+初回の `switch` では、作成直後の `dnc` に対する user systemd/DBus がまだ起動していないため、`Unable to autolaunch a dbus-daemon without a $DISPLAY` や `getty@tty1.service` を伴って終了コード 4 になる場合があります。DBus の未導入や X11 の問題ではないため、`DISPLAY` の設定や `dbus-daemon` の手動起動は行わず、そのまま次の WSL 再起動へ進んでください。
+
 初期状態では `nix-command` と `flakes` がまだ無効な場合があるため、Gitの取得には従来形式の `nix-shell` を使っています。新しい `nix shell` を使う場合は、`nix --extra-experimental-features 'nix-command flakes' shell ...` のように機能を一時的に有効化してください。
 
 Windows の PowerShell から一度停止して再起動します。
@@ -60,12 +62,14 @@ wsl -d NixOS
 
 ```nu
 whoami
+systemctl --user is-active dbus.service
 git clone <repository-url> ~/nix-config
 cd ~/nix-config
 just check
+just switch
 ```
 
-`whoami` の期待値は `dnc` です。以後の NixOS 再構築では、統合された Home Manager 設定も同時に適用されます。
+`whoami` の期待値は `dnc`、DBus の期待値は `active` です。再起動後の `just switch` で初回適用を完了します。以後の NixOS 再構築では、統合された Home Manager 設定も同時に適用されます。
 
 ### 2. 日常の更新と適用
 
