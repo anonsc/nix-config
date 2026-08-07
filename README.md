@@ -18,6 +18,8 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 │       ├── helix/languages.toml
 │       ├── jj/10-ui.toml
 │       ├── nushell/functions.nu
+│       ├── nushell/pingu-LICENSE.txt
+│       ├── nushell/welcome.nu
 │       └── zellij/config.kdl
 ├── modules/docker.nix           # rootful Docker Engine と Compose v2
 ├── modules/nix-settings.nix     # Flake、GC、store 最適化
@@ -299,6 +301,8 @@ Zellij は自動起動しません。明示的に session を attach/create し�
 ```nu
 zj main
 ```
+
+Nushellの既定ウェルカムメッセージは非表示にし、対話起動時だけオフラインのPINGU、現在時刻、Nushellの起動時間を表示します。PINGUのピクセルAAは [sheepla/pingu](https://github.com/sheepla/pingu) のMITライセンス版をNushell向けに移植し、ライセンス文も一緒に配置します。スクリプトや `nu --commands` では表示されません。ZellijはHelixと同名の組み込み`ao`テーマを使います。
 
 ### 画像と SVG
 

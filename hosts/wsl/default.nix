@@ -11,6 +11,7 @@
   };
 
   networking.hostName = "nixos-wsl";
+  time.timeZone = "Asia/Tokyo";
 
   users.users.dnc = {
     isNormalUser = true;

@@ -1,5 +1,7 @@
 let
   functions = ./config/nushell/functions.nu;
+  pinguLicense = ./config/nushell/pingu-LICENSE.txt;
+  welcome = ./config/nushell/welcome.nu;
 in
 {
   programs.carapace = {
@@ -21,8 +23,14 @@ in
 
   programs.nushell = {
     enable = true;
-    extraConfig = "source ${functions}";
+    extraConfig = ''
+      $env.config.show_banner = false
+      source ${functions}
+      source ${welcome}
+    '';
   };
 
   xdg.configFile."nushell/functions.nu".source = functions;
+  xdg.configFile."nushell/pingu-LICENSE.txt".source = pinguLicense;
+  xdg.configFile."nushell/welcome.nu".source = welcome;
 }
