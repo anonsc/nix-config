@@ -18,6 +18,8 @@
     wl-clipboard
   ];
 
+  xdg.configFile."imv/config".source = ./config/imv/config;
+
   programs.git.enable = true;
 
   programs.gh = {

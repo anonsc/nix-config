@@ -16,6 +16,7 @@ NixOS-WSL 上の個人用開発環境を、NixOS と Home Manager の単一 Flak
 │   └── config/                 # アプリ本来の形式で編集する設定ファイル
 │       ├── helix/config.toml
 │       ├── helix/languages.toml
+│       ├── imv/config
 │       ├── jj/10-ui.toml
 │       ├── nushell/functions.nu
 │       ├── nushell/pingu-LICENSE.txt
