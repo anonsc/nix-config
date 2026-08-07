@@ -131,6 +131,7 @@
                   help zj | ignore
                   help clip-copy | ignore
                   help clip-paste | ignore
+                  help file-copy | ignore
                   help img | ignore
                   help adb | ignore
                 '

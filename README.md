@@ -284,8 +284,12 @@ Nushell ではパイプからコピーし、クリップボードのテキスト
 ```nu
 "hello from NixOS" | clip-copy
 clip-paste
+file-copy README.md
+file-copy README.md flake.nix home
 hx --health clipboard
 ```
+
+`file-copy` は対象を絶対パスへ展開し、`wslpath -w` でWindowsパスへ変換してから、Windows PowerShellの `Set-Clipboard -LiteralPath` へ渡します。複数のファイルとディレクトリに対応し、Windows Explorerでそのまま `Ctrl+V` できます。存在しないパスはエラーになります。これはFileDropList用の操作であり、`clip-copy`、Helix、Zellijが使うテキストクリップボードとは用途が異なります。
 
 `hx --health clipboard` の期待値は `wayland (wl-paste+wl-copy)` です。Windows側へ貼り付けられること、Windows側でコピーしたテキストを `clip-paste` で取得できることも確認します。
 
