@@ -327,7 +327,15 @@ adb devices
 
 ## HackGen NF
 
-フォントは Windows Terminal が描画するため、WSL 側には導入しません。必要な場合だけ、Windows PowerShell から独立スクリプトを実行します。
+WSLg上で動作するimv向けには、NixOSへ半角1:全角2版の`HackGen Console NF`を導入し、オーバーレイ用フォントとして明示します。Nixpkgsの配布物には3:5版も同梱されているため、NixOSのfontconfigへは1:2版のRegularとBoldだけを公開します。
+
+```nu
+fc-match "HackGen Console NF"
+```
+
+適用後の期待値は`HackGenConsoleNF-Regular.ttf`です。
+
+Windows TerminalはWindows側で描画するため、NixOSへ入れたフォントを利用できません。必要な場合だけ、Windows PowerShellから独立スクリプトを実行します。
 
 通常の半角1:全角2版をインストールする場合は次を実行します。
 

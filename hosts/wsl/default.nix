@@ -1,4 +1,18 @@
 { pkgs, ... }:
+let
+  # The upstream Nerd Font archive also contains the 3:5 HackGen35 variant.
+  # Expose only the regular 1:2 HackGen Console NF family to Linux fontconfig.
+  hackgenNf12 = pkgs.hackgen-nf-font.overrideAttrs {
+    pname = "hackgen-nf-1-2-font";
+    installPhase = ''
+      runHook preInstall
+
+      install -Dm644 HackGenConsoleNF-*.ttf -t $out/share/fonts/hackgen-nf
+
+      runHook postInstall
+    '';
+  };
+in
 {
   imports = [
     ../../modules/docker.nix
@@ -25,6 +39,7 @@
   };
 
   environment.shells = [ pkgs.nushell ];
+  fonts.packages = [ hackgenNf12 ];
   security.sudo.wheelNeedsPassword = false;
 
   system.stateVersion = "26.05";
