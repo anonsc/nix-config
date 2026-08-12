@@ -22,6 +22,12 @@ in
   wsl = {
     enable = true;
     defaultUser = "dnc";
+    interop = {
+      # Re-register the Windows PE handler if systemd-binfmt replaces WSL's
+      # initial binfmt_misc state. Without it, .exe files fail with ENOEXEC.
+      register = true;
+      includePath = true;
+    };
   };
 
   networking.hostName = "nixos-wsl";

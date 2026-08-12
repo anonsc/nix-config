@@ -356,10 +356,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl.localhost\NixOS\h
 このリポジトリ自体では Flake 評価とビルドを自動化しています。次は適用済み NixOS-WSL でのみ確認できます。
 
 1. Windows から `wsl -d NixOS -- whoami` を実行し、`dnc` が返る。
-2. Nushell の対話セッションで Carapace の Tab 補完、zoxide、direnv の自動反映を確認する。
-3. `systemctl --user status sccache` と `sccache --show-stats` で常駐サービス、20 GiB、保存先を確認する。
-4. sudo なしの `docker info`、`docker compose version`、テストコンテナを確認する。
-5. 外部 `.envrc` を `direnv allow` し、同じ Nushell 内と新しい Zellij ペインの両方で `$env.SCCACHE_DIR` を確認する。`just rust-check` で個人用Cargo設定によるsccache、clang、moldの使用を確認する。
-6. 必要なら Windows 側へフォントを入れ、Windows Terminal で描画を確認する。
+2. `ls /proc/sys/fs/binfmt_misc/WSLInterop` と `powershell.exe -NoProfile -Command "Write-Output ok"` でWSL interopを確認する。
+3. Nushell の対話セッションで Carapace の Tab 補完、zoxide、direnv の自動反映を確認する。
+4. `systemctl --user status sccache` と `sccache --show-stats` で常駐サービス、20 GiB、保存先を確認する。
+5. sudo なしの `docker info`、`docker compose version`、テストコンテナを確認する。
+6. 外部 `.envrc` を `direnv allow` し、同じ Nushell 内と新しい Zellij ペインの両方で `$env.SCCACHE_DIR` を確認する。`just rust-check` で個人用Cargo設定によるsccache、clang、moldの使用を確認する。
+7. 必要なら Windows 側へフォントを入れ、Windows Terminal で描画を確認する。
 
 `just check`、`just build`、`just rust-check` が成功しても、systemd と Docker daemon の実稼働、Windows の既定 WSL ユーザー、対話補完はこの手順で別途確認してください。
