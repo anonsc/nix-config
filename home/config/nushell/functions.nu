@@ -11,10 +11,17 @@ def zj [session: string = "main"] {
 
 # Interactively choose a bookmark and start a new change on top of it.
 def jjn [] {
-  let bookmark = jj --color always bookmark list --all --template 'name ++ if(remote, "@" ++ remote, "") ++ "\n"' | fzf --ansi | str trim
-  if ($bookmark | is-not-empty) {
-    jj new $bookmark
+  let selected = jj --color always bookmark list --all | fzf --ansi | str trim
+  if ($selected | is-empty) {
+    return
   }
+
+  let parsed = $selected | parse --regex '^[^:]+:\s+(?<revision>\S+)'
+  if ($parsed | is-empty) {
+    error make { msg: $"jjn: could not extract a revision from: ($selected)" }
+  }
+
+  jj new ($parsed | first | get revision)
 }
 
 def --wrapped adb [...args: string] {
