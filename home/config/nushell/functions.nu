@@ -11,7 +11,7 @@ def zj [session: string = "main"] {
 
 # Interactively choose a bookmark and start a new change on top of it.
 def jjn [] {
-  let bookmark = jj bookmark list --all --template 'name ++ if(remote, "@" ++ remote, "") ++ "\n"' | fzf | str trim
+  let bookmark = jj --color always bookmark list --all --template 'name ++ if(remote, "@" ++ remote, "") ++ "\n"' | fzf --ansi | str trim
   if ($bookmark | is-not-empty) {
     jj new $bookmark
   }
