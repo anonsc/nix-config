@@ -9,6 +9,14 @@ def zj [session: string = "main"] {
   zellij attach --create $session
 }
 
+# Interactively choose a bookmark and start a new change on top of it.
+def jjn [] {
+  let bookmark = jj bookmark list --all --template 'name ++ if(remote, "@" ++ remote, "") ++ "\n"' | fzf | str trim
+  if ($bookmark | is-not-empty) {
+    jj new $bookmark
+  }
+}
+
 def --wrapped adb [...args: string] {
   let adb = $env.WINDOWS_ADB
   ^$adb ...$args
