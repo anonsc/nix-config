@@ -84,7 +84,7 @@
               nativeBuildInputs = [ self.homeConfigurations.dnc.config.home.path ];
             }
             ''
-              for program in nu carapace fzf zoxide hx zellij jj git gh just direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do
+              for program in nu carapace fzf zoxide hx zellij jj git gh just direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman typescript-language-server vscode-json-language-server nix-locate ,; do
                 if ! command -v "$program" >/dev/null; then
                   echo "missing CLI: $program" >&2
                   exit 1

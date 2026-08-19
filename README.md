@@ -257,7 +257,7 @@ docker run --rm hello-world
 
 ```nu
 getent passwd dnc
-bash -c 'for cmd in nu hx jj git gh just zellij carapace fzf zoxide direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman vscode-json-language-server nix-locate ,; do command -v "$cmd"; done'
+bash -c 'for cmd in nu hx jj git gh just zellij carapace fzf zoxide direnv rg fd difft sccache bat btm dust jq imv wl-copy wl-paste nixd nixfmt taplo marksman typescript-language-server vscode-json-language-server nix-locate ,; do command -v "$cmd"; done'
 jj config get ui.editor
 jj config get ui.diff-formatter
 jj config get user.email
@@ -272,7 +272,7 @@ help zj
 direnv status
 ```
 
-期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Helix の health では Nix に `nixd`、TOML に `taplo`、Markdown に `marksman`、JSON に `vscode-json-language-server` が表示されます。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、fzf、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。ファイルを対話的に検索する場合は、検索起点へ移動して `fzf` を実行します。隠しファイルも `fd` から候補へ渡されるため、ホーム全体なら `cd ~` のあと `fzf` を起動し、ファイル名の一部を入力して絞り込めます。
+期待値は、`dnc` のシェルが Nix store 内の `nu`、Jujutsu の editor が `hx`、diff formatter が `difft` であることです。Helix の health では Nix に `nixd`、TOML に `taplo`、Markdown に `marksman`、JSON に `vscode-json-language-server`、TypeScript、JavaScript、TSX、JSX に `typescript-language-server` が表示されます。Carapace 補完は `git ` などを入力して Tab を押して対話確認します。zoxide、Carapace、fzf、direnv のフックは Home Manager が生成する Nushell 設定へ自動的に読み込まれます。ファイルを対話的に検索する場合は、検索起点へ移動して `fzf` を実行します。隠しファイルも `fd` から候補へ渡されるため、ホーム全体なら `cd ~` のあと `fzf` を起動し、ファイル名の一部を入力して絞り込めます。
 
 ### 共通クリップボード
 
