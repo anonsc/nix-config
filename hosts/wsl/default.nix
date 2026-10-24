@@ -33,6 +33,15 @@ in
   networking.hostName = "nixos-wsl";
   time.timeZone = "Asia/Tokyo";
 
+  # CVE-2026-111943: include the Sectigo cross-sign path as well as emSign.
+  # https://github.com/NixOS/nixpkgs/issues/576485
+  security.pki.caCertificateBlacklist = [
+    "Comodo AAA Services root"
+    "emSign ECC Root CA - G3"
+    "emSign Root CA - C1"
+    "emSign ECC Root CA - C3"
+  ];
+
   users.users.dnc = {
     isNormalUser = true;
     description = "Development user";

@@ -1,0 +1,2 @@
+# Keep the advisory's pinned SHA-256 identical across Windows and Linux checkouts.
+windows/emudhra-compromised-intermediates.json -text
